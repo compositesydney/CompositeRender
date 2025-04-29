@@ -15,87 +15,84 @@
   
   <script>
   /* -----------------------------------------------------------------
-     READ uses the resolved “user_content_key” URL (no redirect, CORS OK)
-     WRITE uses the original script.google.com/…/exec URL (POST capable)
+     READ = resolved user_content_key  (GET only)
+     WRITE = original /exec URL        (POST capable)
      ----------------------------------------------------------------- */
-  const API_GET = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLgSKUoIRe3ilDL8AR0YUpK3X5yWOX4ED6XG1zYUCfHc2bB2BnyR7In9QlswEwduMpUcQHDhOgkMJfCMubajTYU4cW8UtSKwv-QhHvLHKtEtFQMsMuZoY1Xve-HhFl2pPgDEjrqavuy4RFNJoLTUZVNv8XQvHinOG323Nwg1tadHsvH7jI7RfGNc_rbPwy9ZrZ8qqt3sKNK4wLj7HdZ0yZPfOEi69tQFqi_1zE4SyZvzDFSxaoe6KAvUG3Ati2yPJpKRc4lZ3DMlsr6sbCvpKgmC_qpjTA&lib=MQAjBbja3hUCHt1R7KHpTgKjcFc67WdJ1';          // <-- paste here
-  const API_POST = 'https://script.google.com/macros/s/AKfycbyIC9mQxDWx7Daec_9yqdtUo6fjF2WzMM1dO1hZqfhKnPi1CB7bXyxoqo0RMcCC9BFb/exec'; // write
+  const API_GET  = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLjKRzJutQY_2NXU2Gxm9MnhaexAOhNGCQu5iRizHx2ghMmHMqo-IARnpa8v3VNoC84pP2-y5uJxJXPHyuD5hRmByvIExPhKOm5m2xL4HRfPYsbjVQ7yurNsjaaCWW13xvUjBAJq6w7T6OGaQ1ZJKKYMT2iGxdQ0-U1kDN8j3S6Ety39fOvbI_V-v_z6W8lYs3U38JO_sJ_eYO5f7r-gL3Ntxy7GGM_f76GKpkscujpTm_pBZBRFPXjSUd3RRNYYolrnd5X0uk53FgPxHyWKRTwillHAHw&lib=MQAjBbja3hUCHt1R7KHpTgKjcFc67WdJ1';
+  const API_POST = 'https://script.google.com/macros/s/AKfycbyIC9mQxDWx7Daec_9yqdtUo6fjF2WzMM1dO1hZqfhKnPi1CB7bXyxoqo0RMcCC9BFb/exec';
   
-  const state = {};                       // current selections
+  const state = {};                      // current selections
   
-  /* ---------- build UI from sheet data ----------------------------------- */
+  /* -------- build UI from sheet data ------------------------------------ */
   async function build(){
     try{
       const data = await fetch(API_GET).then(r=>r.json());
-  
-      const area = document.getElementById('formArea');
-      area.innerHTML = '';
+      const area = document.getElementById('formArea'); area.innerHTML='';
   
       Object.entries(data).forEach(([col,cfg])=>{
-        const fs  = document.createElement('fieldset');
-        fs.innerHTML = `<legend>${col}${cfg.type==='single'?'':' (multi)'}</legend>`;
-        const box = document.createElement('div'); box.className='flex';
+        const fs=document.createElement('fieldset');
+        fs.innerHTML=`<legend>${col}${cfg.type==='single'?'':' (multi)'}</legend>`;
+        const box=document.createElement('div'); box.className='flex';
   
-        /* inputs ---------------------------------------------------------- */
+        /* input controls */
         if(cfg.type==='single'){
-          const sel = document.createElement('select');
-          sel.innerHTML = `<option value="">— choose —</option>` +
-                          cfg.items.map(v=>`<option>${v}</option>`).join('');
-          sel.onchange = e => state[col] = e.target.value;
+          const sel=document.createElement('select');
+          sel.innerHTML=`<option value="">— choose —</option>`+
+                        cfg.items.map(v=>`<option>${v}</option>`).join('');
+          sel.onchange=e=>state[col]=e.target.value;
           box.appendChild(sel);
         }else{
           cfg.items.forEach(v=>{
             box.insertAdjacentHTML('beforeend',
               `<label><input type="checkbox"> ${v}</label>`);
-            const cb = box.lastChild.firstChild;
-            cb.onchange = () =>{
-              const arr = state[col] || [];
+            const cb=box.lastChild.firstChild;
+            cb.onchange=()=>{
+              const arr=state[col]||[];
               cb.checked ? arr.push(v) : arr.splice(arr.indexOf(v),1);
-              state[col] = arr;
+              state[col]=arr;
             };
           });
         }
         fs.appendChild(box);
   
-        /* add-new option row ---------------------------------------------- */
-        const add = document.createElement('div'); add.className='addBox';
-        add.innerHTML = `<input placeholder="New…"><button>Add</button>`;
-        const inp = add.querySelector('input');
-  
-        add.querySelector('button').onclick = async () =>{
-          const val = inp.value.trim(); if(!val) return alert('Enter text');
+        /* add-new row */
+        const add=document.createElement('div'); add.className='addBox';
+        add.innerHTML=`<input placeholder="New…"><button>Add</button>`;
+        const inp=add.querySelector('input');
+        add.querySelector('button').onclick=async()=>{
+          const val=inp.value.trim(); if(!val) return alert('Enter text');
           await fetch(API_POST,{method:'POST',
-                                 body:JSON.stringify({column:col,value:val})});
-          inp.value=''; build();                      // reload UI with new entry
+            body:JSON.stringify({column:col,value:val})});
+          inp.value=''; build();                                // refresh list
         };
-        fs.appendChild(add); area.appendChild(fs);
+        fs.appendChild(add);
+        area.appendChild(fs);
       });
   
     }catch(err){
-      console.error('Sheet load failed:', err);
+      console.error('Sheet load failed:',err);
       alert('⚠️  Could not load options – see console');
     }
   }
   build();
   
-  /* ---------- generate prompt & save ------------------------------------- */
+  /* -------- generate prompt, get refined version, show both -------------- */
   document.getElementById('genBtn').onclick = async () =>{
-    const parts = [];
+    const parts=[];
     Object.values(state).forEach(v=>{
-      if(!v || (Array.isArray(v) && !v.length)) return;
-      parts.push(Array.isArray(v) ? v.join(', ') : v);
+      if(!v || (Array.isArray(v)&&!v.length)) return;
+      parts.push(Array.isArray(v)?v.join(', '):v);
     });
-    const prompt = parts.join(' | ');
-    document.getElementById('output').textContent = prompt;
+    const rawPrompt = parts.join(' | ');
   
-    await fetch(API_POST,{method:'POST',body:JSON.stringify({prompt})});
+    /* send to Apps Script – it will call OpenAI and return {refined:"…"} */
+    const res = await fetch(API_POST,{
+      method:'POST',
+      body:JSON.stringify({prompt: rawPrompt})
+    }).then(r=>r.json());
+  
+    const refined = res.refined || '**no-response**';
+    document.getElementById('output').textContent =
+        'RAW:\n'+rawPrompt+'\n\n-----\nREFINED:\n'+refined;
   };
-
-  const res = await fetch(API_POST,{
-  method:'POST',
-  body: JSON.stringify({prompt})
-}).then(r=>r.json());
-
-document.getElementById('output').textContent = prompt + '\n\n----\n' +
-                                                res.refined;
   </script></body></html>
