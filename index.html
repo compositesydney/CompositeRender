@@ -1,73 +1,93 @@
 <!doctype html><html lang="en"><head>
-    <meta charset="utf-8"><title>Prompt-Builder</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <style>
-     body{font-family:sans-serif;max-width:42rem;margin:auto;padding:1rem}
-     fieldset{border:1px solid #ccc;margin:1rem 0;padding:1rem}
-     legend{font-weight:600}.flex{display:flex;flex-wrap:wrap;gap:.5rem}
-     button{padding:.35rem .8rem}.addBox{margin-top:.5rem}
-    </style></head><body>
-    <h1>Prompt Constructor</h1>
-    <div id="formArea"></div>
-    <button id="genBtn">Generate prompt</button>
-    <pre id="output"></pre>
-    
-    <script>
-    const API = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLgMghqCjOLLFT-j_8e_ht8C1-liJAnTk2vVrrBcTT4iOQLaxS9bV8JNofKRCQ71GROisl66Yg_HuppqOzfP4zDmqdNW-RNomBe_dm-ZMJTDROiq6rj_sElLWUz7IimGx5iW86mqaOGHTCaJ8saVzagxO8GDt_evIFQe9eAP7d5WO8rUvjO0LIvWes_hub8DomcJxPYFCa7wVLdQ5Qi2XZi8eSyaPVJf6JAxPj7_IzvjNNWpEGOiHFVOxtM09ys3jAFEnGekhL82NyiSRNayBsp9ktICjQ&lib=MQAjBbja3hUCHt1R7KHpTgKjcFc67WdJ1';          // <-- paste here
-    const state = {};                                 // selections
-    
-    async function build(){
-      const data = await fetch(API).then(r=>r.json());
-      const area = document.getElementById('formArea'); area.innerHTML='';
+  <meta charset="utf-8"><title>Prompt-Builder</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body{font-family:sans-serif;max-width:42rem;margin:auto;padding:1rem}
+    fieldset{border:1px solid #ccc;margin:1rem 0;padding:1rem}
+    legend{font-weight:600}.flex{display:flex;flex-wrap:wrap;gap:.5rem}
+    button{padding:.35rem .8rem}.addBox{margin-top:.5rem}
+  </style></head><body>
+  
+  <h1>Prompt Constructor</h1>
+  <div id="formArea"></div>
+  <button id="genBtn">Generate prompt</button>
+  <pre id="output"></pre>
+  
+  <script>
+  /* -----------------------------------------------------------------
+     READ uses the resolved “user_content_key” URL (no redirect, CORS OK)
+     WRITE uses the original script.google.com/…/exec URL (POST capable)
+     ----------------------------------------------------------------- */
+  const API_GET = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLgMghqCjOLLFT-j_8e_ht8C1-liJAnTk2vVrrBcTT4iOQLaxS9bV8JNofKRCQ71GROisl66Yg_HuppqOzfP4zDmqdNW-RNomBe_dm-ZMJTDROiq6rj_sElLWUz7IimGx5iW86mqaOGHTCaJ8saVzagxO8GDt_evIFQe9eAP7d5WO8rUvjO0LIvWes_hub8DomcJxPYFCa7wVLdQ5Qi2XZi8eSyaPVJf6JAxPj7_IzvjNNWpEGOiHFVOxtM09ys3jAFEnGekhL82NyiSRNayBsp9ktICjQ&lib=MQAjBbja3hUCHt1R7KHpTgKjcFc67WdJ1';          // <-- paste here
+  const API_POST = 'https://script.google.com/macros/s/AKfycbzRefutHR2kK1dcn7-T9cLcVeogb1ANOABVxaS2sOn1V8kw_orM-ENc3EKgzC7cEPzk/exec'; // write
+  
+  const state = {};                       // current selections
+  
+  /* ---------- build UI from sheet data ----------------------------------- */
+  async function build(){
+    try{
+      const data = await fetch(API_GET).then(r=>r.json());
+  
+      const area = document.getElementById('formArea');
+      area.innerHTML = '';
+  
       Object.entries(data).forEach(([col,cfg])=>{
-        const fs=document.createElement('fieldset');
-        fs.innerHTML=`<legend>${col}${cfg.type==='single'?'':' (multi)'}</legend>`;
-        const box=document.createElement('div');box.className='flex';
-        // inputs
+        const fs  = document.createElement('fieldset');
+        fs.innerHTML = `<legend>${col}${cfg.type==='single'?'':' (multi)'}</legend>`;
+        const box = document.createElement('div'); box.className='flex';
+  
+        /* inputs ---------------------------------------------------------- */
         if(cfg.type==='single'){
-          const sel=document.createElement('select');
-          sel.innerHTML=`<option value="">— choose —</option>`+
-            cfg.items.map(v=>`<option>${v}</option>`).join('');
-          sel.onchange=e=>state[col]=e.target.value; box.appendChild(sel);
+          const sel = document.createElement('select');
+          sel.innerHTML = `<option value="">— choose —</option>` +
+                          cfg.items.map(v=>`<option>${v}</option>`).join('');
+          sel.onchange = e => state[col] = e.target.value;
+          box.appendChild(sel);
         }else{
           cfg.items.forEach(v=>{
-            const id=col+'-'+v;
             box.insertAdjacentHTML('beforeend',
-              `<label><input type="checkbox" id="${id}"> ${v}</label>`);
-            box.lastChild.firstChild.onchange=e=>{
-              const arr=state[col]||[];
-              e.target.checked?arr.push(v):arr.splice(arr.indexOf(v),1);
-              state[col]=arr;
+              `<label><input type="checkbox"> ${v}</label>`);
+            const cb = box.lastChild.firstChild;
+            cb.onchange = () =>{
+              const arr = state[col] || [];
+              cb.checked ? arr.push(v) : arr.splice(arr.indexOf(v),1);
+              state[col] = arr;
             };
           });
         }
         fs.appendChild(box);
-    
-        // add-new row
-        const add=document.createElement('div');add.className='addBox';
-        add.innerHTML=`<input type=text placeholder="Type new option…" style="flex:1">
-                       <button>Add</button>`;
-        const inp=add.querySelector('input');
-        add.querySelector('button').onclick=async()=>{
-          const v=inp.value.trim(); if(!v)return alert('Enter text');
-          await fetch(API,{method:'POST',
-            body:JSON.stringify({column:col,value:v})});
-          inp.value=''; build();
+  
+        /* add-new option row ---------------------------------------------- */
+        const add = document.createElement('div'); add.className='addBox';
+        add.innerHTML = `<input placeholder="New…"><button>Add</button>`;
+        const inp = add.querySelector('input');
+  
+        add.querySelector('button').onclick = async () =>{
+          const val = inp.value.trim(); if(!val) return alert('Enter text');
+          await fetch(API_POST,{method:'POST',
+                                 body:JSON.stringify({column:col,value:val})});
+          inp.value=''; build();                      // reload UI with new entry
         };
         fs.appendChild(add); area.appendChild(fs);
       });
+  
+    }catch(err){
+      console.error('Sheet load failed:', err);
+      alert('⚠️  Could not load options – see console');
     }
-    build();
-    
-    // generate + save “latest”
-    document.getElementById('genBtn').onclick=async()=>{
-      const parts=[];
-      Object.values(state).forEach(v=>{
-        if(!v||Array.isArray(v)&&!v.length)return;
-        parts.push(Array.isArray(v)?v.join(', '):v);
-      });
-      const prompt=parts.join(' | ');
-      document.getElementById('output').textContent=prompt;
-      await fetch(API,{method:'POST',body:JSON.stringify({prompt})});  // cache
-    };
-    </script></body></html>
+  }
+  build();
+  
+  /* ---------- generate prompt & save ------------------------------------- */
+  document.getElementById('genBtn').onclick = async () =>{
+    const parts = [];
+    Object.values(state).forEach(v=>{
+      if(!v || (Array.isArray(v) && !v.length)) return;
+      parts.push(Array.isArray(v) ? v.join(', ') : v);
+    });
+    const prompt = parts.join(' | ');
+    document.getElementById('output').textContent = prompt;
+  
+    await fetch(API_POST,{method:'POST',body:JSON.stringify({prompt})});
+  };
+  </script></body></html>
