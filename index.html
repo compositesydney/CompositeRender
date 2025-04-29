@@ -18,8 +18,8 @@
      READ uses the resolved “user_content_key” URL (no redirect, CORS OK)
      WRITE uses the original script.google.com/…/exec URL (POST capable)
      ----------------------------------------------------------------- */
-  const API_GET = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLgMghqCjOLLFT-j_8e_ht8C1-liJAnTk2vVrrBcTT4iOQLaxS9bV8JNofKRCQ71GROisl66Yg_HuppqOzfP4zDmqdNW-RNomBe_dm-ZMJTDROiq6rj_sElLWUz7IimGx5iW86mqaOGHTCaJ8saVzagxO8GDt_evIFQe9eAP7d5WO8rUvjO0LIvWes_hub8DomcJxPYFCa7wVLdQ5Qi2XZi8eSyaPVJf6JAxPj7_IzvjNNWpEGOiHFVOxtM09ys3jAFEnGekhL82NyiSRNayBsp9ktICjQ&lib=MQAjBbja3hUCHt1R7KHpTgKjcFc67WdJ1';          // <-- paste here
-  const API_POST = 'https://script.google.com/macros/s/AKfycbzRefutHR2kK1dcn7-T9cLcVeogb1ANOABVxaS2sOn1V8kw_orM-ENc3EKgzC7cEPzk/exec'; // write
+  const API_GET = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLgSKUoIRe3ilDL8AR0YUpK3X5yWOX4ED6XG1zYUCfHc2bB2BnyR7In9QlswEwduMpUcQHDhOgkMJfCMubajTYU4cW8UtSKwv-QhHvLHKtEtFQMsMuZoY1Xve-HhFl2pPgDEjrqavuy4RFNJoLTUZVNv8XQvHinOG323Nwg1tadHsvH7jI7RfGNc_rbPwy9ZrZ8qqt3sKNK4wLj7HdZ0yZPfOEi69tQFqi_1zE4SyZvzDFSxaoe6KAvUG3Ati2yPJpKRc4lZ3DMlsr6sbCvpKgmC_qpjTA&lib=MQAjBbja3hUCHt1R7KHpTgKjcFc67WdJ1';          // <-- paste here
+  const API_POST = 'https://script.google.com/macros/s/AKfycbyIC9mQxDWx7Daec_9yqdtUo6fjF2WzMM1dO1hZqfhKnPi1CB7bXyxoqo0RMcCC9BFb/exec'; // write
   
   const state = {};                       // current selections
   
@@ -90,4 +90,12 @@
   
     await fetch(API_POST,{method:'POST',body:JSON.stringify({prompt})});
   };
+
+  const res = await fetch(API_POST,{
+  method:'POST',
+  body: JSON.stringify({prompt})
+}).then(r=>r.json());
+
+document.getElementById('output').textContent = prompt + '\n\n----\n' +
+                                                res.refined;
   </script></body></html>
